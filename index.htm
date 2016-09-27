@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="jquery-2.1.4.min.js"></script>
+    <script src="jquery.mobile-1.4.5.min.js"></script>
+    <link href="jquery.mobile-1.4.5.min.css" rel="stylesheet" />
+</head>
+
+
+<script>
+    $(document).bind('mobileinit', function() {
+        $.mobile.pushStateEnabled = false;
+    });
+
+</script>
+
+<meta charset="UTF-8">
+
+<script>
+    var connection = new WebSocket('ws://' + location.hostname + ':81/', ['arduino']);
+    connection.onopen = function() {
+        connection.send('Connect ' + new Date());
+    };
+    connection.onerror = function(error) {
+        console.log('WebSocket Error ', error);
+    };
+    connection.onmessage = function(e) {
+        console.log('Server: ', e.data);
+        $('#SystemStatusClicker').css("color", "green");
+        IssueSystemMessage("WebSocket Connected!");
+        document.getElementById('grbllog').value = document.getElementById('grbllog').value + 'GRBL Message: ' + e.data + '\n';
+    };
+    connection.onclose = function(e) {
+        console.log('Server: ', e.data);
+        $('#SystemStatusClicker').css("color", "red");
+        IssueSystemMessage("WebSocket Disconnected!");
+    };
+    $(document).ready(function() {
+
+        // Display Alert on Radio Change    
+        $('body').on('change', 'input[name="radio1"]:radio', function() {
+            alert('Radio Button clicked');
+        });
+
+        document.getElementById('Modeflipper').value = 'off';
+        $('#Modeflipper').flipswitch("refresh");
+        ModeSet();
+/*
+        document.getElementById('Coordinateflipper').value = 'off';
+        $('#Coordinateflipper').flipswitch("refresh");
+        CoordinateToggle();
+*/
+        sendCommand('relativecoordinate');
+
+    });
+
+    var SystemMessageTimeout = null;
+
+    function IssueSystemMessage(msg) {
+        var elem = $("#SystemMessage");
+        elem.hide();
+        elem.html("<font size=+2>" + msg + "</font>");
+        elem.fadeIn('slow');
+        if (SystemMessageTimeout !== null) clearTimeout(SystemMessageTimeout);
+        SystemMessageTimeout = setTimeout(function() {
+            SystemMessageTimeout = null;
+            $("#SystemMessage").fadeOut('slow')
+        }, 3000);
+    }
+
+    function OnePixel() {
+        var pixel = parseInt(document.getElementById('pixel').value).toString(16);
+        console.log('Pixel: ' + pixel);
+        r = 'ff';
+        g = 'ff';
+        b = 'ff';
+        var pixelNumber = '*' + pixel;
+        console.log('RGB: ' + pixel);
+        connection.send('***123');
+    }
+
+/*
+    function CoordinateToggle() {
+        var OnOff = document.getElementById('Coordinateflipper').value;
+        console.log('Coordinate Mode: ' + OnOff);
+        if (OnOff == 'off') {
+            var usercommand = 'G91';
+        }
+        if (OnOff == 'on') {
+            var usercommand = 'G90';
+        }
+
+        console.log('User command: ' + usercommand);
+        document.getElementById('grbllog').value = document.getElementById('grbllog').value + 'User command: ' + usercommand + '\n';
+        document.getElementById('grbllog').scrollTop = document.getElementById('grbllog').scrollHeight;
+        connection.send(usercommand);
+    }
+*/
+    
+    function ModeSet() {
+        var OnOff = document.getElementById('Modeflipper').value;
+        console.log('Mode: ' + OnOff);
+        if (OnOff == 'on') {
+            document.getElementById('LaserSwitch').style.visibility='visible';
+            document.getElementById('zp').style.visibility='hidden';
+            document.getElementById('zm').style.visibility='hidden';
+        }
+        if (OnOff == 'off') {
+            document.getElementById('LaserSwitch').style.visibility='hidden';
+            document.getElementById('zp').style.visibility='visible';
+            document.getElementById('zm').style.visibility='visible';
+        }
+    }
+    
+    function sendgcodefile() {
+/*
+                if(document.getElementById('start').value == "开始"){
+                    document.getElementById('start').value = "停止";
+                    $('#start').button("refresh");
+                }
+                else if(document.getElementById('start').value == "停止"){
+                    document.getElementById('start').value = "开始";
+                    $('#start').button("refresh");
+                }
+*/
+    }
+
+    function sendCommand(txt) {
+        switch (txt) {
+            case 'command':
+                var usercommand = document.getElementById('command').value.toUpperCase();
+                document.getElementById('command').value = "";
+                break;
+            case 'xp':
+                var usercommand = 'G91 G01 F' + document.getElementById('fate').value + ' X+' + document.getElementById('step').value;
+                break;
+            case 'xm':
+                var usercommand = 'G91 G01 F' + document.getElementById('fate').value + ' X-' + document.getElementById('step').value;
+                break;
+            case 'yp':
+                var usercommand = 'G91 G01 F' + document.getElementById('fate').value + ' Y+' + document.getElementById('step').value;
+                break;
+            case 'ym':
+                var usercommand = 'G91 G01 F' + document.getElementById('fate').value + ' Y-' + document.getElementById('step').value;
+                break;
+            case 'xpyp':
+                var usercommand = 'G91 G01 F' + document.getElementById('fate').value + ' X+' + document.getElementById('step').value + ' Y+' + document.getElementById('step').value;
+                break;
+            case 'xpym':
+                var usercommand = 'G91 G01 F' + document.getElementById('fate').value + ' X+' + document.getElementById('step').value + ' Y-' + document.getElementById('step').value;
+                break;
+            case 'xmyp':
+                var usercommand = 'G91 G01 F' + document.getElementById('fate').value + ' X-' + document.getElementById('step').value + ' Y+' + document.getElementById('step').value;
+                break;
+            case 'xmym':
+                var usercommand = 'G91 G01 F' + document.getElementById('fate').value + ' X-' + document.getElementById('step').value + ' Y-' + document.getElementById('step').value;
+                break;
+            case 'zp':
+                var usercommand = 'G91 G01 F500' + ' Z+' + document.getElementById('step').value;
+                break;
+            case 'zm':
+                var usercommand = 'G91 G01 F500' + ' Z-' + document.getElementById('step').value;
+                break;
+            case 'reset':
+                var usercommand = 0x18;
+                break;
+            case 'setting':
+                var usercommand = '$$';
+                break;
+            case 'help':
+                var usercommand = '$';
+                break;
+            case 'sethome':
+                var usercommand = 'G92 X0 Y0 Z0';
+                break;
+            case 'gohome':
+                var usercommand = 'G90 G00 F5000 X0 Y0 Z0';
+                break;
+            case 'pause':
+                if(document.getElementById('pause').value == "暂停"){
+                    var usercommand = '!';
+                    document.getElementById('pause').value = "恢复";
+                    $('#pause').button("refresh");
+                }
+                else if(document.getElementById('pause').value == "恢复"){
+                    var usercommand = '~';
+                    document.getElementById('pause').value = "暂停";
+                    $('#pause').button("refresh");
+                }
+                   
+                break;
+            case 'relativecoordinate':
+                var usercommand = 'G91';
+                break;
+            case 'stop':
+                var usercommand = 'M2';
+                break;
+            default:
+                var usercommand = '';
+        }
+        console.log('User command: ' + usercommand);
+        if (usercommand == "") {
+                    alert("Please Input Correct G-code Command!");
+        } else {
+                    document.getElementById('grbllog').value = document.getElementById('grbllog').value + 'User command: ' + usercommand + '\n';
+                    document.getElementById('grbllog').scrollTop = document.getElementById('grbllog').scrollHeight;
+                    connection.send(usercommand);
+        }
+
+    }
+
+</script>
+
+
+
+<style>
+    .collapsible {
+        display: none;
+    }
+    
+    .inbutton {
+        background-color: blue;
+    }
+    
+    #SystemMessage {
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        background-color: DarkSlateBlue;
+        color: #ffffff;
+        left:  t: 5px;
+        display: none;
+    }
+    
+    .ui-li .ui-btn-inner a.ui-link-inherit,
+    .ui-li-static.ui-li {
+        display: block !important;
+        padding: 0.9em 75px 0.9em 15px !important;
+    }
+    
+    div.ui-slider-switch {
+        right: 0 !important;
+        width: 100% !important;
+    }
+    
+    body {
+        margin: 1px;
+        padding: 1px;
+    }
+    
+    textarea.ui-input-text {
+        min-height: 100px;
+        font-size: 10px;
+    }
+    
+    .ui-block-a,
+    .ui-block-b,
+    .ui-block-c,
+    .ui-block-d,
+    .ui-block-e {
+        height: 45px;
+        padding: 7px;
+    }
+    /* Custom indentations are needed because the length of custom labels differs from
+     the length of the standard labels */
+    
+    .ui-flipswitch .ui-btn.ui-flipswitch-on {
+        text-indent: -4.3em;
+    }
+    
+    .ui-flipswitch .ui-flipswitch-off {
+        text-indent: 0em;
+    }
+    /* Custom widths are needed because the length of custom labels differs from
+    the length of the standard labels */
+    
+    .ui-flipswitch {
+        width: 6.5em;
+    }
+    
+    .ui-flipswitch.ui-flipswitch-active {
+        padding-left: 4.5em;
+        width: 2em;
+    }
+    
+    @media (min-width: 28em) {
+        /* Repeated from rule .ui-flipswitch above */
+        .ui-field-contain> label+ .ui-flipswitch {
+            width: 2em;
+        }
+        .mytext {
+            width: 280px;
+            float: left;
+            margin-left: 5px;
+            font-size: 16px;
+        }
+        .mybutton {
+            margin-left: 285px;
+            width: 20px;
+            position: relative;
+            top: 3px;
+        }
+        .mytextarea {
+            width: 340px;
+            float: left;
+            margin-left: 5px;
+        }
+
+        .myarrow {
+            width: 220px;
+            float: left;
+            margin-left: 5px;
+        }
+        .myarrowset {
+            margin-left: 230px;
+            width: 120px;
+            position: relative;
+            top: 8px;
+        }
+        .mymodeset {
+            width: 120px;
+            float: left;
+            margin-left: 5px;
+        }
+        .myset {
+            margin-left: 130px;
+            width: 210px;
+            position: relative;
+            top: -2px;
+        }
+        .myposition {
+            float: left;
+            margin-left: 5px;
+        }
+        .myposset {
+            margin-left: 260px;
+            width: 40px;
+            position: relative;
+            top: 25px;
+        }
+        
+        @media only screen and (min-width: 375px){
+            .ui-page {
+                width: 375px !important;
+                margin: 0 auto !important;
+                position: relative !important;
+                border-right: 5px #666 outset !important;
+                border-left: 5px #666 outset !important;
+            }
+        }
+
+
+</style>
+
+
+
+<body>
+    <h2 align="center" style="line-height:2px; width:345px">GRBL Web Controller</h2>
+
+    <div class="mytext">
+        <input id="command" size="10" maxlength="30" data-theme="b" style="text-transform:uppercase;" placeholder="User Command..." />
+    </div>
+    <div class="mybutton">
+        <input id="submit" type="button" onclick="sendCommand('command')" value="发送" data-theme="b" data-inline="true" data-mini="true" />
+    </div>
+    <div style="clear:both"></div>
+
+    <div class="mytextarea">
+        <textarea id="grbllog" cols="50" rows="1" data-theme="b" style="overflow-y:auto" readonly="readonly" onpropertychange="this.scrollTop = this.scrollHeight " onfocus="this.scrollTop = this.scrollHeight " placeholder="GRBL log..."></textarea>
+    </div>
+    <div style="clear:both"></div>
+
+    <div class="mymodeset">
+<!--
+    <select id="Coordinateflipper" data-role="flipswitch" onchange="CoordinateToggle();" data-theme="b">
+      <option value="on" >绝对坐标</option>
+      <option value="off" selected="">相对坐标</option>
+    </select>
+-->
+    <select id="Modeflipper" data-role="flipswitch" onchange="ModeSet();" data-theme="b">
+      <option value="on">激光绘图</option>
+      <option value="off" selected="">笔绘图</option>
+    </select>
+    </div>
+
+    <div class="myset" data-role="controlgroup" data-type="horizontal">
+       <input id="stop" type="button" onclick="sendCommand('stop')" value="停止" data-theme="b" data-inline="true" data-mini="true" />
+       <input id="reset" type="button" onclick="sendCommand('reset')" value="复位" data-theme="b" data-inline="true" data-mini="true" />
+       <input id="setting" type="button" onclick="sendCommand('setting')" value="设置" data-theme="b" data-inline="true" data-mini="true" />
+       <input id="help" type="button" onclick="sendCommand('help')" value="帮助" data-theme="b" data-inline="true" data-mini="true" />
+    </div>
+
+    <div style="clear:both"></div>
+    <div id="Position" class="myposition">
+        <table cellpadding="2" cellspacing="2">
+            <tr>
+                <td style="border: 2px solid #000;">
+                    <table cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td>
+                                <p style="font-size: 10px;text-align:center;line-height:0px;">机器位置</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div id="mX" style="text-align: center; margin: 2px; font-size: 20px; width: 100px; border: 1px solid #888; font-weight: bold;">X: 0.000</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div id="mY" style="text-align: center; margin: 2px; font-size: 20px; width: 100px; border: 1px solid #888; font-weight: bold;">Y: 0.000</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div id="mZ" style="text-align: center; margin: 2px; font-size: 20px; width: 100px; border: 1px solid #888; font-weight: bold;">Z: 0.000</div>
+                            </td>
+                        </tr>
+                    </table>
+
+                </td>
+                <td style="border: 2px solid #000;">
+                    <table cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td>
+                                <p style="font-size: 10px;text-align:center;line-height:0px;">工作位置</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div id="wX" style="text-align: center; margin: 2px; font-size: 20px; width: 100px; border: 1px solid #888; font-weight: bold;">X: 0.000</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div id="wY" style="text-align: center; margin: 2px; font-size: 20px; width: 100px; border: 1px solid #888; font-weight: bold;">Y: 0.000</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div id="wZ" style="text-align: center; margin: 2px; font-size: 20px; width: 100px; border: 1px solid #888; font-weight: bold;">Z: 0.000</div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="myposset" data-role="controlgroup" data-type="vertical">
+       <input id="sethome" type="button" onclick="sendCommand('sethome')" value="设为原点" data-theme="b" data-inline="true" data-mini="true" />
+       <input id="gohome" type="button" onclick="sendCommand('gohome')" value="回到原点" data-theme="b" data-inline="true" data-mini="true" />
+    </div>
+    
+    <div style="clear:both"></div>
+
+
+
+
+
+
+    <div class="myarrow">
+        <div id="grid" class="ui-grid-d">
+            <div class="ui-block-a"><a href="#" data-role="button" id="xmyp" data-icon="arrow-u-l" data-theme="b" data-inline="true" data-iconpos="notext" onclick="sendCommand('xmyp')">X-Y+</a></div>
+            <div class="ui-block-b"><a href="#" data-role="button" id="yp" data-icon="arrow-u" data-theme="b" data-inline="true" data-iconpos="notext" onclick="sendCommand('yp')">Y+  </a></div>
+            <div class="ui-block-c"><a href="#" data-role="button" id="xpyp" data-icon="arrow-u-r" data-theme="b" data-inline="true" data-iconpos="notext" onclick="sendCommand('xpyp')">X+Y+</a></div>
+            <div class="ui-block-d">
+                <a href="#" data-role="none"></a>
+            </div>
+            <div class="ui-block-e"><a href="#" data-role="button" id="zp" data-icon="carat-u" data-theme="b" data-inline="true" data-iconpos="notext" onclick="sendCommand('zp')">Z+  </a></div>
+            <div class="ui-block-a"><a href="#" data-role="button" id="xm" data-icon="arrow-l" data-theme="b" data-inline="true" data-iconpos="notext" onclick="sendCommand('xm')">X-  </a></div>
+            <div class="ui-block-b">
+                <a href="#" data-role="none"></a>
+            </div>
+            <div class="ui-block-c"><a href="#" data-role="button" id="xp" data-icon="arrow-r" data-theme="b" data-inline="true" data-iconpos="notext" onclick="sendCommand('xp')">X+  </a></div>
+            <div class="ui-block-a"><a href="#" data-role="button" id="xmym" data-icon="arrow-d-l" data-theme="b" data-inline="true" data-iconpos="notext" onclick="sendCommand('xmym')">X-Y-</a></div>
+            <div class="ui-block-b"><a href="#" data-role="button" id="ym" data-icon="arrow-d" data-theme="b" data-inline="true" data-iconpos="notext" onclick="sendCommand('ym')">Y-</a></div>
+            <div class="ui-block-c"><a href="#" data-role="button" id="xpym" data-icon="arrow-d-r" data-theme="b" data-inline="true" data-iconpos="notext" onclick="sendCommand('xpym')">X+Y-</a></div>
+            <div class="ui-block-d">
+                <a href="#" data-role="none"></a>
+            </div>
+            <div class="ui-block-e"><a href="#" data-role="button" id="zm" data-icon="carat-d" data-theme="b" data-inline="true" data-iconpos="notext" onclick="sendCommand('zm')">Z-  </a></div>
+        </div>
+    </div>
+
+    <div class="myarrowset">
+        <table cellpadding="0" cellspacing="0">
+            <tr>
+                <td>
+                    <p style="font-size: 18px;text-align:center;line-height:0px;">步长</p>
+                </td>
+                <td>
+            <select name="step" id="step" data-inline="true" data-iconpos="left" data-mini="true" data-theme="b">
+             <option value="0.01">0.01</option>
+             <option value="0.1">0.1</option>
+             <option value="1" selected>1</option>
+             <option value="10">10</option>
+             <option value="100">100</option>
+            </select>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <p style="font-size: 18px;text-align:center;line-height:0px;">速率</p>
+                </td>
+                <td>
+            <select name="fate" id="fate" data-inline="true" data-iconpos="left" data-mini="true" data-theme="b">
+             <option value="200">200</option>
+             <option value="500" selected>500</option>
+             <option value="1000">1000</option>
+             <option value="2000">2000</option>
+             <option value="5000">5000</option>
+            </select>
+                </td>
+            </tr>
+        </table>
+        <div id="LaserSwitch">
+           <select id="Laserflipper" data-role="flipswitch" onchange="CoordinateToggle();" data-theme="b">
+             <option value="on" selected="">激光关闭</option>
+             <option value="off">激光打开</option>
+           </select>
+        </div>
+    </div>
+    <div style="clear:both"></div>
+    
+    <div>
+            <table cellpadding="0" cellspacing="0">
+                <tr>
+                    <td>
+                        <input id="opensdgcode" type="button" onclick="sendCommand('')" value="打开" data-theme="b" data-inline="true" data-mini="true" />
+                    </td>
+                    <td>
+                        <div id="sdfile" style="text-align: left; margin: 2px; font-size: 15px; width: 160px; height:30px; border: 2px solid #666; font-weight: light; line-height: 30px;">G-code文件...</div>
+                    </td>
+                    <td>
+                        <div data-role="controlgroup" data-type="horizontal" style="text-align: left; margin: 5px;">
+                            <input id="start" type="button" onclick="sendgcodefile()" value="开始" data-theme="b" data-inline="true" data-mini="true" />
+                            <input id="pause" type="button" onclick="sendCommand('pause')" value="暂停" data-theme="b" data-inline="true" data-mini="true" />
+                        </div>
+                    </td>
+                </tr>
+            </table>
+    </div>
+    <div style="clear:both"></div>
+
+    <div id=SystemMessage>...</div>   
+    
+</body>
+
+</html>
